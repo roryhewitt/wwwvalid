@@ -1,0 +1,11 @@
+
+             STRPGMEXP  PGMLVL(*CURRENT) SIGNATURE('WWWVALID_1.0    ')
+
+             EXPORT     SYMBOL('www_validate')               /* Proc */
+             EXPORT     SYMBOL('www_endsession')             /* Proc */
+             EXPORT     SYMBOL('www_getusrprf')              /* Proc */
+             EXPORT     SYMBOL('www_swapusrprf')             /* Proc */
+             EXPORT     SYMBOL('www_resetusrprf')            /* Proc */
+
+             ENDPGMEXP
+

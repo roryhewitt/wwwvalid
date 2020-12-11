@@ -1,0 +1,187 @@
+             PGM
+
+/*===================================================================*/
+/*                                                                   */
+/* This program should be compiled using the following command:      */
+/*                                                                   */
+/*    CRTBNDCL PGM(WWWVALID/SETUP)                                   */
+/*               SRCFILE(WWWVALID/QSRC)                              */
+/*               SRCMBR(SETUP)                                       */
+/*                                                                   */
+/* Once compiled, the SETUP program should be called to create all   */
+/* the WWWVALID-related objects, as follows:                         */
+/*                                                                   */
+/*    CALL PGM(WWWVALID/SETUP)                                       */
+/*                                                                   */
+/*===================================================================*/
+
+/* Work variables */
+             DCL        VAR(&MATPGMNM)   TYPE(*CHAR) LEN(80)
+             DCL        VAR(&THISLIB)    TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTRLS) TYPE(*CHAR) LEN(10) VALUE(V5R4M0)
+             DCL        VAR(&TEXT) TYPE(*CHAR) LEN(50) VALUE('Web +
+                          Access User Validator')
+             DCL        VAR(&OBJ) TYPE(*CHAR) LEN(128)
+
+/* Global MONMSG */
+             MONMSG     MSGID(CPD0000 CPF0000 MCH0000 RNS0000) +
+                          EXEC(GOTO CMDLBL(ERROR))
+
+/*===================================================================*/
+/* PROLOGUE                                                          */
+/*===================================================================*/
+
+/* Get the library of this program */
+             CHGVAR     &MATPGMNM X'00000050000000500000000000000000'
+             CALLPRC    PRC('_MATPGMNM') PARM(&MATPGMNM)
+             CHGVAR     VAR(&THISLIB) VALUE(%SST(&MATPGMNM 19 10))
+
+/* Make sure this library is at the top of the library list */
+             RMVLIBLE   LIB(&THISLIB)
+             MONMSG     MSGID(CPF0000)
+             ADDLIBLE   LIB(&THISLIB) POSITION(*FIRST)
+             MONMSG     MSGID(CPF0000)
+
+/*===================================================================*/
+/* MAINLINE                                                          */
+/*===================================================================*/
+
+/* Grant *CHANGE authority to this library to QTMHHTTP/QTMHHTP1, so */
+/* the HTTP server can create the WWWVALID user space at runtime.   */
+ GRTOBJAUT:  GRTOBJAUT  OBJ(&THISLIB) OBJTYPE(*LIB) USER(QTMHHTTP +
+                          QTMHHTP1) AUT(*CHANGE)
+
+/* If the WWWVALID source member doesn't exist, then this is a      */
+/* runtime-only 'non-source' version of WWWVALID. If so, don't try  */
+/* to create the WWWVALID sevice program, since it already exists   */
+/* (in a non-debuggable version).                                   */
+             CHKOBJ     OBJ(&THISLIB/QSRC) OBJTYPE(*FILE) MBR(WWWVALID)
+             MONMSG     MSGID(CPF9815) EXEC(DO)
+                RCVMSG     MSGTYPE(*EXCP) RMV(*YES)
+                GOTO       CMDLBL(CRTEXTOBJ)
+             ENDDO
+
+/* Create the WWWVALID service program from the WWWVALID module.    */
+ CRTRPGMOD:  CRTRPGMOD  MODULE(&THISLIB/WWWVALID) +
+                          SRCFILE(&THISLIB/QSRC) SRCMBR(WWWVALID) +
+                          DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+ CRTSRVPGM:  CRTSRVPGM  SRVPGM(&THISLIB/WWWVALID) +
+                          MODULE(&THISLIB/WWWVALID) +
+                          EXPORT(*SRCFILE) SRCFILE(&THISLIB/QSRC) +
+                          SRCMBR(WWWVALIDSP) TEXT(&TEXT) +
+                          TGTRLS(&TGTRLS)
+ DLTMOD:     DLTMOD     MODULE(&THISLIB/WWWVALID)
+
+ CRTEXTOBJ:
+
+/* Create the WWWVALID binding directory and add WWWVALID.          */
+ CRTBNDDIR:  CRTBNDDIR  BNDDIR(&THISLIB/WWWVALID) TEXT(&TEXT)
+             MONMSG     MSGID(CPF0000)
+ ADDBNDDIRE: ADDBNDDIRE BNDDIR(&THISLIB/WWWVALID) +
+                          OBJ((&THISLIB/WWWVALID *SRVPGM))
+             MONMSG     MSGID(CPF0000)
+
+/* Create the WWWVALID message file and add messages                */
+ CRTMSGF:    CRTMSGF    MSGF(&THISLIB/WWWVALID) TEXT(&TEXT)
+             MONMSG     MSGID(CPF0000)
+ ADDMSGD:    ADDMSGD    MSGID(WWW0001) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Error in Web Access User +
+                          Validator.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0002) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Invalid user ID.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0003) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Your session has timed out. Sign in +
+                          to start a new session.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0004) MSGF(&THISLIB/WWWVALID) +
+                          MSG('User ID not specified.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0005) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Password not specified.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0006) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Invalid credentials.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0007) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Your session has ended. Sign in to +
+                          start a new session.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0008) MSGF(&THISLIB/WWWVALID) +
+                          MSG('The page has timed out. Sign in to +
+                          reconnect to your session.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0009) MSGF(&THISLIB/WWWVALID) +
+                          MSG('This session was started by a +
+                          different user.') SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0010) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Session not found.') SECLVL(*NONE) +
+                          SEV(30)
+             MONMSG     MSGID(CPF0000)
+             ADDMSGD    MSGID(WWW0011) MSGF(&THISLIB/WWWVALID) +
+                          MSG('Data level incompatibility.') +
+                          SECLVL(*NONE) SEV(30)
+             MONMSG     MSGID(CPF0000)
+
+/* Create the WWWVALIDEP exit program                               */
+ CRTPGM_EP:  CRTBNDRPG  PGM(&THISLIB/WWWVALIDEP) +
+                          SRCFILE(&THISLIB/QSRC) DFTACTGRP(*NO) +
+                          ACTGRP(*CALLER) DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+
+/* Create the sample test CGI programs                              */
+ CRTPGM_T1:  CRTBNDRPG  PGM(&THISLIB/WWWVALIDT1) +
+                          SRCFILE(&THISLIB/QSRC) DFTACTGRP(*NO) +
+                          ACTGRP(*CALLER) DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+
+ CRTPGM_T2:  CRTBNDRPG  PGM(&THISLIB/WWWVALIDT2) +
+                          SRCFILE(&THISLIB/QSRC) DFTACTGRP(*NO) +
+                          ACTGRP(*CALLER) BNDDIR(&THISLIB/WWWVALID) +
+                          DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+
+ CRTPGM_T3:  CRTBNDRPG  PGM(&THISLIB/WWWVALIDT3) +
+                          SRCFILE(&THISLIB/QSRC) DFTACTGRP(*NO) +
+                          ACTGRP(*CALLER) BNDDIR(&THISLIB/WWWVALID) +
+                          DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+
+ CRTPGM_T4:  CRTBNDRPG  PGM(&THISLIB/WWWVALIDT4) +
+                          SRCFILE(&THISLIB/QSRC) DFTACTGRP(*NO) +
+                          ACTGRP(*CALLER) BNDDIR(&THISLIB/WWWVALID) +
+                          DBGVIEW(*ALL) TGTRLS(&TGTRLS)
+
+/* Copy the LOGIN and ERROR members to the IFS                       */
+             CRTDIR     DIR('/wwwvalid')
+             MONMSG     MSGID(CPF0000)
+             CHGVAR     VAR(&OBJ) VALUE('/qsys.lib/' |< &THISLIB |< +
+                          '.lib/qsrc.file/login.mbr')
+             CPY        OBJ(&OBJ) TOOBJ('/wwwvalid/login.html') +
+                          DTAFMT(*TEXT) OWNER(*KEEP)
+             MONMSG     MSGID(CPF0000)
+             CHGVAR     VAR(&OBJ) VALUE('/qsys.lib/' |< &THISLIB |< +
+                          '.lib/qsrc.file/error.mbr')
+             CPY        OBJ(&OBJ) TOOBJ('/wwwvalid/error.html') +
+                          DTAFMT(*TEXT) OWNER(*KEEP)
+             MONMSG     MSGID(CPF0000)
+
+             GOTO       CMDLBL(ENDPGM)
+
+/*===================================================================*/
+/* Error-handling                                                    */
+/*===================================================================*/
+
+ ERROR:
+             SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA('Error +
+                          in Web Access User Validator setup. See +
+                          job log for more details.') MSGTYPE(*ESCAPE)
+
+/*===================================================================*/
+/* Program end and clean-up                                          */
+/*===================================================================*/
+
+ ENDPGM:
+             SNDPGMMSG  MSG('Web Access User Validator setup +
+                          completed successfully.') MSGTYPE(*COMP)
+
+             RMVMSG     PGMQ(*ALLINACT) CLEAR(*ALL)
+             ENDPGM
