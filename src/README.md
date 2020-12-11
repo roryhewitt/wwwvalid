@@ -1,2 +1,0 @@
-# wwwvalid
-WWWVALID
